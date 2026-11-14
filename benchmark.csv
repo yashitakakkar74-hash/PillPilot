@@ -1,0 +1,5 @@
+test,ms_per_query
+Exact lookup: linear scan,0.25529131599999744
+Exact lookup: trie,0.0024630500000029087
+Top-3 typo match: full sort,689.7593441250001
+Top-3 typo match: heap (K=3),707.5869436250005

@@ -1,0 +1,42 @@
+brand,salt,strength,form,price,type
+Dolo 650,Paracetamol,650 mg,Tablet,2.0,Brand
+Calpol 650,Paracetamol,650 mg,Tablet,1.9,Brand
+Paracip 650,Paracetamol,650 mg,Tablet,1.5,Branded generic
+Jan Aushadhi Paracetamol 650,Paracetamol,650 mg,Tablet,0.9,Jan Aushadhi
+Crocin 500,Paracetamol,500 mg,Tablet,1.8,Brand
+Jan Aushadhi Paracetamol 500,Paracetamol,500 mg,Tablet,0.7,Jan Aushadhi
+Azithral 500,Azithromycin,500 mg,Tablet,21,Brand
+Azee 500,Azithromycin,500 mg,Tablet,19,Brand
+Aziwok 500,Azithromycin,500 mg,Tablet,14,Branded generic
+Jan Aushadhi Azithromycin 500,Azithromycin,500 mg,Tablet,9,Jan Aushadhi
+Pan 40,Pantoprazole,40 mg,Tablet,13,Brand
+Pantocid 40,Pantoprazole,40 mg,Tablet,11,Brand
+Pantop 40,Pantoprazole,40 mg,Tablet,9,Branded generic
+Jan Aushadhi Pantoprazole 40,Pantoprazole,40 mg,Tablet,4,Jan Aushadhi
+Glycomet 500,Metformin,500 mg,Tablet,3.5,Brand
+Obimet 500,Metformin,500 mg,Tablet,2.2,Branded generic
+Jan Aushadhi Metformin 500,Metformin,500 mg,Tablet,1.2,Jan Aushadhi
+Amlong 5,Amlodipine,5 mg,Tablet,3.0,Brand
+Stamlo 5,Amlodipine,5 mg,Tablet,2.4,Branded generic
+Jan Aushadhi Amlodipine 5,Amlodipine,5 mg,Tablet,1.0,Jan Aushadhi
+Atorva 10,Atorvastatin,10 mg,Tablet,6.5,Brand
+Storvas 10,Atorvastatin,10 mg,Tablet,5.0,Branded generic
+Jan Aushadhi Atorvastatin 10,Atorvastatin,10 mg,Tablet,2.5,Jan Aushadhi
+Okacet 10,Cetirizine,10 mg,Tablet,2.2,Brand
+Cetzine 10,Cetirizine,10 mg,Tablet,1.8,Brand
+Jan Aushadhi Cetirizine 10,Cetirizine,10 mg,Tablet,0.6,Jan Aushadhi
+Brufen 400,Ibuprofen,400 mg,Tablet,1.9,Brand
+Jan Aushadhi Ibuprofen 400,Ibuprofen,400 mg,Tablet,0.9,Jan Aushadhi
+Voveran 50,Diclofenac,50 mg,Tablet,4.5,Brand
+Jan Aushadhi Diclofenac 50,Diclofenac,50 mg,Tablet,1.4,Jan Aushadhi
+Thyronorm 50,Levothyroxine,50 mcg,Tablet,2.0,Brand
+Eltroxin 50,Levothyroxine,50 mcg,Tablet,1.9,Brand
+Jan Aushadhi Levothyroxine 50,Levothyroxine,50 mcg,Tablet,1.1,Jan Aushadhi
+Telma 40,Telmisartan,40 mg,Tablet,9.5,Brand
+Telista 40,Telmisartan,40 mg,Tablet,7.0,Branded generic
+Jan Aushadhi Telmisartan 40,Telmisartan,40 mg,Tablet,2.8,Jan Aushadhi
+Augmentin 625,Amoxicillin + Clavulanic acid,625 mg,Tablet,24,Brand
+Moxikind-CV 625,Amoxicillin + Clavulanic acid,625 mg,Tablet,19,Branded generic
+Jan Aushadhi Amoxicillin-Clavulanate 625,Amoxicillin + Clavulanic acid,625 mg,Tablet,12,Jan Aushadhi
+Ecosprin 75,Aspirin,75 mg,Tablet,1.0,Brand
+Jan Aushadhi Aspirin 75,Aspirin,75 mg,Tablet,0.4,Jan Aushadhi
