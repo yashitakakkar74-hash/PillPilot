@@ -1,0 +1,4 @@
+Paracip 650
+Pan 40
+Cetzine 10
+Stamlo 5
