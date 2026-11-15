@@ -18,6 +18,10 @@ SAMPLE = "Tab Dolo 650 1-0-1 x 5 days\nTab Azitral 500 OD x 3 days\nTab Pan 40 1
 
 # Keep only lines that look like medicines (skips clinic name, doctor, patient and date lines read by OCR)
 MED = re.compile(r"^\s*(tab|tablet|cap|capsule|syp|syrup|inj)\b|\b[01]\s*-\s*[01]\s*-\s*[01]\b|\b(od|bd|bid|tds|tid|qid)\b|\d\s*(days?|weeks?|wks?)\b", re.I)
+def read_image(data):
+    img = Image.open(io.BytesIO(data)); img.load()
+    img = img.convert("L"); img.thumbnail((1600, 1600))   # smaller image = much faster OCR on a small server
+    return pytesseract.image_to_string(img, timeout=25)
 def medicine_lines(text):
     keep = [l for l in text.splitlines() if l.strip() and MED.search(l)]
     return "\n".join(keep) if keep else text
@@ -167,15 +171,16 @@ tr.best td{background:#ece1fb;color:#3b1580;font-weight:600}tr.best td:first-chi
 .dose{display:flex;align-items:center;gap:8px;padding:3px 0}.dose+.dose{border-top:1px solid rgba(255,255,255,.3)}
 .pill{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;border:0;background:none;color:#fff;border-radius:14px;padding:9px 0;font:inherit;cursor:pointer}
 .pill .nm{order:1;flex:1;min-width:0;display:block;line-height:1.25;font-weight:700}.pill .nm small{display:block;font-size:.8rem;font-weight:500}
-.cap{order:2;flex:none;position:relative;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.32);box-shadow:inset 0 0 0 2px rgba(255,255,255,.75);transition:background .2s,transform .2s}
-.cap::before{content:"";position:absolute;left:12px;top:6px;width:8px;height:16px;border:solid var(--slot);border-width:0 3px 3px 0;transform:rotate(45deg) scale(0);transition:transform .2s}
-.cap::after{content:"";position:absolute;left:9px;top:15px;width:16px;height:3px;border-radius:2px;background:#fff;opacity:0}
-.pill:active .cap{transform:scale(.92)}
-.dose.taken .cap{background:#fff;box-shadow:none}.dose.taken .cap::before{transform:rotate(45deg) scale(1)}
-.dose.skipped .cap{background:rgba(0,0,0,.25);box-shadow:none}.dose.skipped .cap::after{opacity:1}.dose.skipped .nm{text-decoration:line-through;opacity:.85}
+.cap{order:2;flex:none;position:relative;width:54px;height:24px;margin-right:10px;transform:rotate(-25deg);transition:transform .35s}
+.cap::before,.cap::after{content:"";position:absolute;top:0;width:50%;height:100%;box-shadow:inset 0 0 0 2px #fff;transition:transform .35s,background .2s}
+.cap::before{left:0;border-radius:999px 0 0 999px;background:#fff}
+.cap::after{right:0;border-radius:0 999px 999px 0;background:rgba(255,255,255,.3)}
+.pill:active .cap{transform:rotate(-25deg) scale(.92)}
+.dose.taken .cap{transform:rotate(0)}.dose.taken .cap::before{transform:translateX(-8px) rotate(-14deg)}.dose.taken .cap::after{transform:translateX(8px) rotate(14deg);background:#fff}
+.dose.skipped .cap{opacity:.5}
 .pill .st{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.dose.pop .cap{animation:pop .45s}
-@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+.dose.pop .pill{animation:pop .45s}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.06)}100%{transform:scale(1)}}
 .skip{flex:none;border:0;background:rgba(0,0,0,.2);color:#fff;border-radius:999px;font:inherit;font-size:.82rem;font-weight:600;padding:7px 13px;cursor:pointer}.skip[aria-pressed=true]{background:#fff;color:#8f1b39}
 .toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:var(--sheet);border-radius:999px;padding:10px 20px;font-size:.9rem;z-index:9}
 .fx{position:fixed;width:12px;height:12px;border-radius:50%;pointer-events:none;z-index:9}
@@ -225,6 +230,7 @@ function show(){const f=file.files[0];if(!f)return;prev.src=URL.createObjectURL(
 file.addEventListener("change",show);["dragenter","dragover"].forEach(e=>drop.addEventListener(e,v=>{v.preventDefault();drop.classList.add("over")}));
 ["dragleave","drop"].forEach(e=>drop.addEventListener(e,v=>{v.preventDefault();drop.classList.remove("over")}));
 drop.addEventListener("drop",v=>{if(v.dataTransfer.files.length){file.files=v.dataTransfer.files;show()}});
+addEventListener("pageshow",()=>{const b=document.getElementById("btn");b.disabled=false;b.textContent="Analyse prescription"});
 document.getElementById("f").addEventListener("submit",()=>{const b=document.getElementById("btn");b.disabled=true;b.textContent="Reading prescription..."});
 </script>{% endblock %}"""
 TRACKER = """{% extends "base.html" %}{% block mascot %}{{ M["flame"] }}{% endblock %}{% block hero %}<h1>Medicine tracker</h1><p>{{ today.strftime('%A, %d %B %Y') }} · mark each dose as taken or skipped.</p>{% endblock %}
@@ -258,13 +264,16 @@ function refresh(){const R=rows(),tk=R.filter(r=>state(r)=="taken").length,sk=R.
  R.forEach(r=>{const s=state(r);r.querySelector(".pill").setAttribute("aria-pressed",s=="taken");r.querySelector(".skip").setAttribute("aria-pressed",s=="skipped");r.querySelector(".st").textContent=label[s]});
  badges();return t>0&&tk==t}
 function toast(m){const e=document.createElement("div");e.className="toast";e.setAttribute("role","status");e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
+function burst(el){if(reduce||!el)return;const r=el.getBoundingClientRect(),cols=["#fff","#ffd66b","#fff3c4"];
+ for(let i=0;i<8;i++){const e=document.createElement("i");e.className="fx";e.style.width=e.style.height="8px";e.style.background=cols[i%3];e.style.left=(r.left+r.width/2)+"px";e.style.top=(r.top+r.height/2)+"px";document.body.appendChild(e);
+ const a=i/8*6.28,d=26+Math.random()*22;e.animate([{transform:"translate(0,0)",opacity:1},{transform:"translate("+Math.cos(a)*d+"px,"+Math.sin(a)*d+"px)",opacity:0}],{duration:550,easing:"ease-out"}).onfinish=()=>e.remove()}}
 function celebrate(){if(reduce)return;const box=(document.querySelector(".ring")||document.body).getBoundingClientRect(),cols=["#ee5c92","#f6a21e","#17a99d","#a577e8"];
  for(let i=0;i<16;i++){const e=document.createElement("i");e.className="fx";e.style.background=cols[i%4];e.style.left=(box.left+box.width/2)+"px";e.style.top=(box.top+box.height/2)+"px";document.body.appendChild(e);
  const a=Math.random()*6.28,d=70+Math.random()*90;e.animate([{transform:"translate(0,0) rotate(0)",opacity:1},{transform:"translate("+Math.cos(a)*d+"px,"+(Math.sin(a)*d+40)+"px) rotate("+(Math.random()*540)+"deg)",opacity:0}],{duration:900,easing:"ease-out"}).onfinish=()=>e.remove()}}
 document.querySelectorAll(".dose button").forEach(b=>b.addEventListener("click",()=>{
  const row=b.closest(".dose"),prev=state(row),act=b.dataset.act,next=prev==act?"pending":act;
  row.classList.remove("taken","skipped");if(next!="pending")row.classList.add(next);
- if(next=="taken"){row.classList.add("pop");setTimeout(()=>row.classList.remove("pop"),500)}
+ if(next=="taken"){row.classList.add("pop");setTimeout(()=>row.classList.remove("pop"),500);burst(row.querySelector(".cap"))}
  const all=refresh();if(next=="taken"&&all){celebrate();toast("All doses taken for today")}
  fetch("/api/dose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({med:+row.dataset.med,slot:+row.dataset.slot,status:next})})
   .then(r=>{if(!r.ok)throw 0}).catch(()=>{row.classList.remove("taken","skipped");if(prev!="pending")row.classList.add(prev);refresh();toast("Could not save. Try again.")})}));
@@ -310,7 +319,8 @@ def index():
     if request.method == "POST":
         f = request.files.get("image")
         if f and f.filename:
-            try: ocr = pytesseract.image_to_string(Image.open(io.BytesIO(f.read())))
+            try: ocr = read_image(f.read())
+            except RuntimeError: err = "Reading the image took too long. Paste the prescription text instead, or upload a smaller, clearer photo."
             except pytesseract.TesseractNotFoundError: err = "Text reading (OCR) is not installed on this server. Paste the prescription text instead."
             except Exception: err = "Could not read that file. Please upload a PNG or JPG image."
             else:
