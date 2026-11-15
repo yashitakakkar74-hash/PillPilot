@@ -2,6 +2,7 @@ import os, io, re, random, sqlite3
 from datetime import datetime, date, timedelta, timezone
 from flask import Flask, request, render_template, redirect, jsonify
 from jinja2 import DictLoader
+from markupsafe import Markup
 from werkzeug.exceptions import BadRequest
 from PIL import Image
 import pytesseract
@@ -118,80 +119,85 @@ def seed():
                 d += timedelta(days=1)
 
 # ---------------- templates ----------------
-CSS = """:root{--bg:#f1f5f9;--card:#fff;--ink:#0f1b33;--mute:#5a6a82;--line:#dbe3ec;--teal:#0f766e;--tealbg:#d5f0eb;--amb:#8a5200;--ambbg:#fdeccd;--red:#b42318;--redbg:#fde4e1;--h1:#0f766e;--h2:#115e8a}
-@media (prefers-color-scheme:dark){:root{--bg:#0b1220;--card:#141e30;--ink:#e8eef7;--mute:#9aabc2;--line:#28384e;--teal:#4fd1c0;--tealbg:#123a39;--amb:#f3c26b;--ambbg:#3a2c10;--red:#ff9b8f;--redbg:#3d1a17;--h1:#0b4f4a;--h2:#0c3f5e}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-.wrap{max-width:960px;margin:0 auto;padding:0 16px}.hero{background:linear-gradient(120deg,var(--h1),var(--h2));color:#fff;padding:18px 0 74px}.hero .wrap{padding:0 16px}
-.top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.4rem}
-.logo{width:32px;height:17px;border-radius:9px;background:linear-gradient(90deg,#fff 50%,#9be7dc 50%);transform:rotate(-30deg)}
-nav{display:flex;gap:6px;background:rgba(255,255,255,.14);border-radius:999px;padding:4px}nav a{color:#fff;text-decoration:none;padding:6px 16px;border-radius:999px;font-weight:600;font-size:.95rem}nav a.on{background:#fff;color:#0f766e}
-.hero h1{margin:20px 0 2px;font-size:1.9rem}.hero p{margin:0;opacity:.92;max-width:60ch}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,27,51,.05)}.pull{margin-top:-52px}
-h2{font-size:1.15rem;margin:26px 0 10px}h3{margin:0 0 8px;font-size:1.02rem}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.stat b{display:block;font-size:1.8rem;font-weight:800;line-height:1.1}.stat span{color:var(--mute);font-size:.84rem}.stat.win{background:var(--tealbg);border-color:var(--teal)}.stat.win b{color:var(--teal)}
-.two{display:grid;gap:14px;grid-template-columns:1fr 1fr}@media(max-width:760px){.two{grid-template-columns:1fr}}
-.btn{background:var(--teal);color:var(--card);border:0;border-radius:12px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}.btn.alt{background:transparent;color:var(--teal);border:1px solid var(--teal)}.btn.sm{padding:6px 12px;font-size:.88rem;border-radius:10px}
-.note{font-size:.84rem;color:var(--amb);background:var(--ambbg);border-radius:10px;padding:8px 12px;margin:10px 0}
-.badge{font-size:.76rem;border-radius:999px;padding:2px 10px;background:var(--tealbg);color:var(--teal);font-weight:600}.badge.warn{background:var(--ambbg);color:var(--amb)}.badge.bad{background:var(--redbg);color:var(--red)}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chip{font-size:.8rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 9px;color:var(--mute)}.mute{color:var(--mute);font-size:.88rem}
-.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:26px 14px;text-align:center;cursor:pointer}.drop:hover,.drop.over{border-color:var(--teal);background:var(--tealbg)}.drop input{display:none}#prev{max-height:130px;border-radius:8px;margin-top:10px;display:none}
-textarea{width:100%;min-height:120px;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);color:var(--ink);font:14px/1.5 ui-monospace,Menlo,Consolas,monospace}
-.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:420px;font-size:.92rem}th{font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}tr.best td{background:var(--tealbg);font-weight:600}
-.alert{border-radius:12px;padding:10px 14px;margin-bottom:8px;font-size:.93rem}.alert.warn{background:var(--ambbg);color:var(--amb)}.alert.danger{background:var(--redbg);color:var(--red)}.alert.ok{background:var(--tealbg);color:var(--teal)}
-.chart{width:100%;height:auto}.chart text{fill:var(--mute);font-size:11px}.b1{fill:var(--amb);opacity:.75}.b2{fill:var(--teal)}.bg{fill:var(--line);opacity:.5}
-.legend{display:flex;gap:14px;font-size:.82rem;color:var(--mute);margin-top:4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
-.hb{margin:8px 0}.hb div{height:10px;border-radius:6px;background:var(--teal)}.hb span{font-size:.88rem}
-.ringwrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.ring{width:120px;height:120px}.ring circle{fill:none;stroke-width:11}.ring .t{stroke:var(--line)}.ring .p{stroke:var(--teal);stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%}.ring text{fill:var(--ink);font-weight:800;font-size:26px}
-.week{display:flex;gap:8px;flex-wrap:wrap}.day{width:52px;text-align:center;border-radius:12px;padding:6px 0;background:var(--bg);border:1px solid var(--line);font-size:.78rem;color:var(--mute)}.day b{display:block;font-size:.95rem;color:var(--ink)}.day.full{background:var(--tealbg);border-color:var(--teal)}.day.part{background:var(--ambbg)}.day.none{opacity:.5}
-.dose{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}.dose:last-child{border-bottom:0}
-.dose.taken .nm{text-decoration:line-through;opacity:.6}.dose.skipped .nm{color:var(--red)}.act{display:flex;gap:6px}.act button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:6px 14px;font:inherit;font-size:.88rem;cursor:pointer}
-.dose.taken .act .tk{background:var(--teal);color:var(--card);border-color:var(--teal)}.dose.skipped .act .sk{background:var(--red);color:var(--card);border-color:var(--red)}
-.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden}.bar div{height:100%;background:var(--teal)}
-:focus-visible{outline:3px solid var(--teal);outline-offset:2px}footer{color:var(--mute);font-size:.8rem;text-align:center;padding:26px 16px 40px}
-/* ===== Pastel Capsule theme ===== */
-:root{--bg:#faf8ff;--card:#fff;--ink:#2a2540;--mute:#6b6585;--line:#e6e0f5;--teal:#4f3fb0;--tealbg:#ece6ff;--amb:#6b4e00;--ambbg:#fff2b3;--red:#a3203a;--redbg:#ffd9de;--mint:#bff0dc;--mintink:#14634a;--butter:#f5c842;--h1:#c9b8ff;--h2:#bff0dc;--heroink:#2a2540}
-@media (prefers-color-scheme:dark){:root{--bg:#1a1630;--card:#252040;--ink:#efeaff;--mute:#a9a2c9;--line:#3a3360;--teal:#c9b8ff;--tealbg:#372f66;--amb:#ffe58a;--ambbg:#4a4018;--red:#ff9fb0;--redbg:#4a1f2c;--mint:#1f4a40;--mintink:#bff0dc;--h1:#40307a;--h2:#1f4a40;--heroink:#efeaff}}
-body{font-family:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-h1,h2,h3,.brand,.stat b{font-weight:800}
-.hero{color:var(--heroink)}.hero p{opacity:1}
-.logo{width:36px;height:17px;border-radius:999px;background:linear-gradient(90deg,var(--teal) 50%,var(--card) 50%);box-shadow:inset 0 0 0 2px var(--ink);transform:rotate(-30deg)}
-nav{background:rgba(255,255,255,.55)}nav a{color:var(--heroink)}nav a.on{background:var(--ink);color:var(--card)}
-@media (prefers-color-scheme:dark){nav{background:rgba(255,255,255,.12)}nav a.on{background:var(--teal);color:#1a1630}}
-.card{border-radius:24px;box-shadow:0 6px 20px rgba(79,63,176,.08)}.stat{border-radius:22px}.alert{border-radius:18px}.note{border-radius:16px}
-textarea{border-radius:20px}.drop{border-radius:24px;border-color:var(--teal)}.drop:hover,.drop.over{background:var(--tealbg)}.drop b{display:block;margin-bottom:4px}
-.btn{border-radius:999px;padding:11px 22px}.btn.sm{padding:7px 16px}
-.chip{border-radius:999px;background:var(--tealbg);border-color:transparent;color:var(--ink)}
-.badge{background:var(--mint);color:var(--mintink)}.badge.warn{background:var(--ambbg);color:var(--amb)}.badge.bad{background:var(--redbg);color:var(--red)}
-.stat.win,.day.full{background:var(--mint);border-color:transparent}.stat.win b,.stat.win span,.day.full{color:var(--mintink)}
-.alert.ok{background:var(--mint);color:var(--mintink)}
-tr.best td{background:var(--mint);color:var(--mintink)}
-th{text-transform:none;letter-spacing:0;font-size:.82rem}
-.b1{fill:var(--butter);opacity:1}.b2{fill:var(--teal)}.bar,.bar div,.hb div,.bg{border-radius:999px}
-/* ===== Pill-pop tracker ===== */
-.dose{border-bottom:0;padding:5px 0;flex-wrap:nowrap}
-.pill{flex:1;min-width:0;display:flex;align-items:center;gap:14px;text-align:left;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 18px 9px 12px;font:inherit;cursor:pointer;transition:background .25s,border-color .25s,transform .1s}
-.pill:active{transform:scale(.97)}
-.cap{flex:none;position:relative;width:48px;height:22px;transform:rotate(-25deg);transition:transform .35s}
-.cap::before,.cap::after{content:"";position:absolute;top:0;width:50%;height:100%;box-shadow:inset 0 0 0 2px var(--ink);transition:transform .35s}
-.cap::before{left:0;border-radius:999px 0 0 999px;background:var(--teal)}.cap::after{right:0;border-radius:0 999px 999px 0;background:var(--butter)}
-.pill .nm{display:block;line-height:1.25}.pill .nm small{display:block;color:var(--mute);font-size:.8rem;font-weight:600}
-.pill .st{margin-left:auto;font-size:.82rem;font-weight:700;color:var(--mute);white-space:nowrap}
-.dose.taken .nm{text-decoration:none;opacity:1}
-.dose.taken .pill{background:var(--mint);border-color:var(--mintink);color:var(--mintink)}.dose.taken .pill .st,.dose.taken .pill small{color:var(--mintink)}
-.dose.taken .cap{transform:rotate(0)}.dose.taken .cap::before{transform:translateX(-7px) rotate(-14deg)}.dose.taken .cap::after{transform:translateX(7px) rotate(14deg)}
-.dose.skipped .pill{background:var(--redbg);border-color:var(--red);color:var(--red)}.dose.skipped .nm{color:var(--red)}.dose.skipped .pill .st,.dose.skipped .pill small{color:var(--red)}.dose.skipped .cap{opacity:.45}
-.dose.pop .pill{animation:pop .45s}
-@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.07)}100%{transform:scale(1)}}
-.skip{flex:none;border:0;background:none;color:var(--mute);font:inherit;font-size:.85rem;text-decoration:underline;cursor:pointer;padding:10px 6px}.skip[aria-pressed=true]{color:var(--red);font-weight:700}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--card);border-radius:999px;padding:10px 20px;font-size:.9rem;z-index:9}
-.fx{position:fixed;width:22px;height:10px;border-radius:999px;pointer-events:none;z-index:9}
+CSS = """:root{color-scheme:light dark;--bg:#c9aaee;--sheet:#fff;--card:#f5f3f9;--ink:#1b1030;--mute:#625a7c;--line:#e4def0;--pri:#7432c5;--onpri:#fff;--teal:#17a99d;--butter:#f6a21e;--pink:#ee5c92}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1030;--sheet:#241a3b;--card:#2f2349;--ink:#f3edff;--mute:#b6abd8;--line:#43365f;--pri:#b894f5;--onpri:#1b0f33}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.sheet{max-width:520px;min-height:calc(100vh - 48px);margin:24px auto;background:var(--sheet);border-radius:34px;display:flex;flex-direction:column}
+.in{flex:1;padding:20px 18px 24px}
+.top{display:flex;align-items:center;gap:10px;margin:0 0 16px}.brand{font-size:1.7rem;font-weight:800;letter-spacing:-.03em}.logo{width:38px;height:38px;flex:none}.logo svg{width:100%;height:100%;display:block}
+.greet{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,#c9a8f4,#a577e8);color:#1b1030;border-radius:26px;padding:16px 18px;margin-bottom:8px}
+.greet .mascot{flex:none;width:84px}.greet .mascot svg{width:100%;height:auto;display:block}
+.greet h1{margin:0 0 4px;font-size:1.3rem;line-height:1.2;font-weight:800;letter-spacing:-.02em}.greet p{margin:0;font-size:.88rem;line-height:1.4}
+h2{font-size:1.2rem;font-weight:800;letter-spacing:-.02em;margin:24px 0 10px}h3{margin:0 0 8px;font-size:1.02rem;font-weight:700}
+a{color:var(--pri);font-weight:600}.mute{color:var(--mute);font-size:.88rem}
+.card{background:var(--card);border-radius:22px;padding:16px;margin-bottom:12px}.pull{margin-top:0}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(2,1fr);margin-bottom:12px}
+.stat{border-radius:20px;padding:14px;color:#1f1535;background:#ecdcaa}
+.stat b{display:block;font-size:1.7rem;font-weight:800;line-height:1.1;letter-spacing:-.02em}.stat span{font-size:.82rem;color:#4a3f6b;font-weight:500}
+.grid .stat:nth-child(6n+1){background:#ecdcaa}.grid .stat:nth-child(6n+2){background:#b9dfe4}.grid .stat:nth-child(6n+3){background:#f6d1dc}.grid .stat:nth-child(6n+4){background:#cdd7f3}.grid .stat:nth-child(6n+5){background:#fbd9c8}.grid .stat:nth-child(6n){background:#c9ecd9}
+.grid .stat.win{background:var(--pri);color:var(--onpri)}.grid .stat.win span{color:var(--onpri)}
+.g3 .stat:last-child{grid-column:1/-1}
+.two{display:grid;gap:12px;grid-template-columns:1fr}
+.btn{display:inline-block;background:var(--pri);color:var(--onpri);border:0;border-radius:14px;padding:14px 22px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;text-align:center}
+.btn.alt{background:#ece1fb;color:#4b1f9a}.btn.sm{padding:9px 16px;font-size:.88rem}.btn[disabled]{opacity:.7;cursor:wait}
+.note{font-size:.84rem;color:#5c4200;background:#fff0b8;border-radius:14px;padding:9px 12px;margin:12px 0 0}
+.badge{display:inline-block;font-size:.74rem;border-radius:999px;padding:3px 10px;background:#ece1fb;color:#4b1f9a;font-weight:700}.badge.warn{background:#fff0b8;color:#5c4200}.badge.bad{background:#ffd9e0;color:#8f1b39}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chip{font-size:.8rem;background:var(--sheet);border-radius:999px;padding:3px 11px;color:var(--ink);font-weight:500}
+.drop{display:block;border:2px dashed #b99be6;background:var(--sheet);border-radius:20px;padding:26px 14px;text-align:center;cursor:pointer}.drop:hover,.drop.over{border-color:var(--pri)}.drop input{display:none}.drop b{display:block;margin-bottom:4px}#prev{max-height:130px;border-radius:12px;margin-top:10px;display:none}
+textarea{width:100%;min-height:120px;border:0;border-radius:16px;padding:12px;background:var(--sheet);color:var(--ink);font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
+input[type=checkbox]{accent-color:var(--pri)}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:340px;font-size:.9rem}th{font-size:.8rem;color:var(--mute);font-weight:600}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left}
+tr.best td{background:#ece1fb;color:#3b1580;font-weight:600}tr.best td:first-child{border-radius:12px 0 0 12px}tr.best td:last-child{border-radius:0 12px 12px 0}
+.alert{border-radius:16px;padding:11px 14px;margin-bottom:8px;font-size:.92rem}.alert.warn{background:#fff0b8;color:#5c4200}.alert.danger{background:#ffd9e0;color:#8f1b39}.alert.ok{background:#d3f3e3;color:#0f5c43}.alert a{color:inherit;text-decoration:underline}
+.chart{width:100%;height:auto}.chart text{fill:var(--mute);font-size:11px}.b1{fill:var(--butter)}.b2{fill:var(--teal)}.bg{fill:var(--sheet)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;color:var(--mute);margin-top:6px}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.hb{margin:8px 0}.hb div{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--pink),var(--butter))}.hb span{font-size:.88rem}
+.ringwrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}.ring{width:112px;height:112px}.ring circle{fill:none;stroke-width:12}.ring .t{stroke:var(--sheet)}.ring .p{stroke:var(--pri);stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .5s}.ring text{fill:var(--ink);font-weight:800;font-size:26px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{text-align:center;border-radius:16px;padding:8px 0;background:var(--card);font-size:.74rem;color:var(--mute)}.day b{display:block;font-size:1rem;color:var(--ink)}
+.day.full{background:#c9ecd9;color:#2f5e4a}.day.part{background:#fff0b8;color:#6b4e00}.day.full b,.day.part b{color:#1f1535}.day.none{opacity:.65}
+.bar{height:12px;border-radius:999px;background:var(--sheet);overflow:hidden}.bar div{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--pri),var(--pink))}
+/* dose cards: one colour per time of day */
+.slot{color:#fff;padding:14px 16px;border-radius:24px}.slot h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 4px;color:#fff}
+.s0{--slot:#b92a63;background:linear-gradient(110deg,#cf3772,#b92a63)}
+.s1{--slot:#ab3f0a;background:linear-gradient(110deg,#c4540a,#ab3f0a)}
+.s2{--slot:#096e68;background:linear-gradient(110deg,#0b857d,#096e68)}
+.slot .badge{background:rgba(0,0,0,.2);color:#fff}.slot .badge.warn{background:#fff0b8;color:#5c4200}.slot .badge.bad{background:#fff;color:#8f1b39}
+.slot :focus-visible{outline-color:#fff}
+.dose{display:flex;align-items:center;gap:8px;padding:3px 0}.dose+.dose{border-top:1px solid rgba(255,255,255,.3)}
+.pill{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:12px;text-align:left;border:0;background:none;color:#fff;border-radius:14px;padding:9px 0;font:inherit;cursor:pointer}
+.pill .nm{order:1;flex:1;min-width:0;display:block;line-height:1.25;font-weight:700}.pill .nm small{display:block;font-size:.8rem;font-weight:500}
+.cap{order:2;flex:none;position:relative;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.32);box-shadow:inset 0 0 0 2px rgba(255,255,255,.75);transition:background .2s,transform .2s}
+.cap::before{content:"";position:absolute;left:12px;top:6px;width:8px;height:16px;border:solid var(--slot);border-width:0 3px 3px 0;transform:rotate(45deg) scale(0);transition:transform .2s}
+.cap::after{content:"";position:absolute;left:9px;top:15px;width:16px;height:3px;border-radius:2px;background:#fff;opacity:0}
+.pill:active .cap{transform:scale(.92)}
+.dose.taken .cap{background:#fff;box-shadow:none}.dose.taken .cap::before{transform:rotate(45deg) scale(1)}
+.dose.skipped .cap{background:rgba(0,0,0,.25);box-shadow:none}.dose.skipped .cap::after{opacity:1}.dose.skipped .nm{text-decoration:line-through;opacity:.85}
+.pill .st{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.dose.pop .cap{animation:pop .45s}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+.skip{flex:none;border:0;background:rgba(0,0,0,.2);color:#fff;border-radius:999px;font:inherit;font-size:.82rem;font-weight:600;padding:7px 13px;cursor:pointer}.skip[aria-pressed=true]{background:#fff;color:#8f1b39}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:var(--sheet);border-radius:999px;padding:10px 20px;font-size:.9rem;z-index:9}
+.fx{position:fixed;width:12px;height:12px;border-radius:50%;pointer-events:none;z-index:9}
+:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+footer{color:var(--mute);font-size:.78rem;text-align:center;padding:22px 4px 0}
+/* bottom tab bar */
+.tabs{position:sticky;bottom:0;z-index:5;display:flex;background:var(--sheet);border-top:1px solid var(--line);border-radius:0 0 34px 34px;padding:8px 8px calc(10px + env(safe-area-inset-bottom,0px))}
+.tabs a{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0 8px;color:var(--mute);text-decoration:none;font-size:.72rem;font-weight:600}
+.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tabs a.on{color:var(--ink);font-weight:800}.tabs a.on svg{stroke:var(--pri)}
+.tabs a.on::after{content:"";position:absolute;bottom:-2px;left:50%;width:28px;height:4px;margin-left:-14px;border-radius:4px;background:var(--pri)}
+@media (max-width:560px){body{background:var(--sheet)}.sheet{margin:0;border-radius:0;min-height:100vh;min-height:100dvh}.tabs{border-radius:0}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 """
-BASE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"><title>PillPilot</title><style>""" + CSS + """</style></head><body>
-<header class="hero"><div class="wrap"><div class="top"><div class="brand"><span class="logo"></span>PillPilot</div>
-<nav>{% for h,l in [("/","Analyse"),("/tracker","Tracker"),("/dashboard","Dashboard")] %}<a href="{{ h }}" class="{{ 'on' if request.path==h }}">{{ l }}</a>{% endfor %}</nav></div>
-{% block hero %}{% endblock %}</div></header><main class="wrap">{% block content %}{% endblock %}</main>
-<footer>PillPilot · decision support only · does not sell or dispense medicines · stores only medicine names, costs and dose logs</footer>{% block script %}{% endblock %}</body></html>"""
+BASE = """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#c9aaee"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><title>PillPilot</title><style>""" + CSS + """</style></head><body>
+<div class="sheet"><div class="in">
+<div class="top"><span class="logo">{{ M["pill"] }}</span><span class="brand">PillPilot</span></div>
+<section class="greet"><div class="mascot">{% block mascot %}{{ M["pentagon"] }}{% endblock %}</div><div>{% block hero %}{% endblock %}</div></section>
+<main>{% block content %}{% endblock %}</main>
+<footer>PillPilot · decision support only · does not sell or dispense medicines · stores only medicine names, costs and dose logs</footer></div>
+<nav class="tabs" aria-label="Main">{% for h,l,ic in [("/","Analyse","<path d='M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 12h8'/>"),("/tracker","Tracker","<circle cx='12' cy='12' r='9'/><path d='m8 12.5 2.8 2.8L16 9.5'/>"),("/dashboard","Dashboard","<path d='M5 20V10M12 20V4M19 20v-7'/>")] %}<a href="{{ h }}"{% if request.path==h %} class="on" aria-current="page"{% endif %}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">{{ ic|safe }}</svg><span>{{ l }}</span></a>{% endfor %}</nav></div>
+{% block script %}{% endblock %}</body></html>"""
 HOME = """{% extends "base.html" %}{% block hero %}<h1>Dose it right, from price to pill.</h1><p>Your prescription, made simple. See cheaper options, spot anything risky and tap through your doses as you go.</p>{% endblock %}
 {% block content %}
 <form class="card pull" method="post" enctype="multipart/form-data" id="f">
@@ -204,7 +210,7 @@ HOME = """{% extends "base.html" %}{% block hero %}<h1>Dose it right, from price
 {% if err %}<div class="alert danger">{{ err }}</div>{% endif %}
 {% if r %}{% if saved %}<div class="alert ok">Saved. <a href="/tracker">Open your medicine tracker</a> or see the <a href="/dashboard">dashboard</a>.</div>{% endif %}
 {% if ocr %}<div class="card"><b>Text read from the image</b><pre style="white-space:pre-wrap;margin:6px 0 0">{{ ocr }}</pre></div>{% endif %}
-{% if r.found %}<h2>Course cost</h2><div class="grid"><div class="stat"><b>₹{{ '%.0f'|format(r.prescribed) }}</b><span>As prescribed</span></div><div class="stat win"><b>₹{{ '%.0f'|format(r.cheapest) }}</b><span>Cheapest valid combination</span></div>
+{% if r.found %}<h2>Course cost</h2><div class="grid g3"><div class="stat"><b>₹{{ '%.0f'|format(r.prescribed) }}</b><span>As prescribed</span></div><div class="stat win"><b>₹{{ '%.0f'|format(r.cheapest) }}</b><span>Cheapest valid combination</span></div>
 <div class="stat"><b>₹{{ '%.0f'|format(r.prescribed-r.cheapest) }}</b><span>Possible saving{% if r.prescribed %} ({{ '%.0f'|format((r.prescribed-r.cheapest)/r.prescribed*100) }}%){% endif %}</span></div></div>
 {% endif %}<h2>Medicines</h2>
 {% for i in r['items'] %}<div class="card">{% if not i.row %}<b>{{ i.line }}</b> <span class="badge bad">Not recognised</span><p class="mute">No close match in the dataset. Check the spelling or ask your pharmacist.</p>
@@ -221,7 +227,7 @@ file.addEventListener("change",show);["dragenter","dragover"].forEach(e=>drop.ad
 drop.addEventListener("drop",v=>{if(v.dataTransfer.files.length){file.files=v.dataTransfer.files;show()}});
 document.getElementById("f").addEventListener("submit",()=>{const b=document.getElementById("btn");b.disabled=true;b.textContent="Reading prescription..."});
 </script>{% endblock %}"""
-TRACKER = """{% extends "base.html" %}{% block hero %}<h1>Medicine tracker</h1><p>{{ today.strftime('%A, %d %B %Y') }} · mark each dose as taken or skipped.</p>{% endblock %}
+TRACKER = """{% extends "base.html" %}{% block mascot %}{{ M["flame"] }}{% endblock %}{% block hero %}<h1>Medicine tracker</h1><p>{{ today.strftime('%A, %d %B %Y') }} · mark each dose as taken or skipped.</p>{% endblock %}
 {% block content %}
 {% if not active %}<div class="card pull"><h3>No active medicines</h3><p class="mute">{% if done %}Your last course has finished.{% else %}Analyse a prescription and choose “Send to my tracker”, or load demo data.{% endif %}</p>
 <a class="btn" href="/">Analyse a prescription</a> <form method="post" action="/demo" style="display:inline"><button class="btn alt">Load demo data</button></form></div>
@@ -231,7 +237,7 @@ TRACKER = """{% extends "base.html" %}{% block hero %}<h1>Medicine tracker</h1><
 <div class="grid" style="flex:1;min-width:240px"><div class="stat"><b>{{ streak }}</b><span>Day streak (80%+ taken)</span></div><div class="stat"><b>{{ week_pct }}%</b><span>Last 7 days adherence</span></div></div></div></div>
 <h2>This week</h2><div class="week">{% for d,s,t in week %}<div class="day {{ 'none' if s==0 else 'full' if t==s else 'part' }}">{{ d.strftime('%a') }}<b>{{ d.day }}</b>{% if s %}{{ t }}/{{ s }}{% else %}-{% endif %}</div>{% endfor %}</div>
 <h2>Today’s schedule</h2>
-{% for sl in slots %}{% if sl['items'] %}<div class="card" data-hour="{{ sl.hour }}"><h3>{{ sl.name }} · {{ sl.time }} <span class="badge slot-state"></span></h3>
+{% for sl in slots %}{% if sl['items'] %}<div class="card slot s{{ sl.k }}" data-hour="{{ sl.hour }}"><h3>{{ sl.name }} · {{ sl.time }} <span class="badge slot-state"></span></h3>
 {% for it in sl['items'] %}<div class="dose {{ it.status }}" data-med="{{ it.m.id }}" data-slot="{{ sl.k }}"><button class="pill" data-act="taken" aria-pressed="{{ 'true' if it.status=='taken' else 'false' }}"><span class="cap" aria-hidden="true"></span><span class="nm"><b>{{ it.m.brand }}</b><small>{{ it.m.salt }}</small></span><span class="st">{{ 'Taken' if it.status=='taken' else 'Skipped' if it.status=='skipped' else 'Tap to take' }}</span></button><button class="skip" data-act="skipped" aria-pressed="{{ 'true' if it.status=='skipped' else 'false' }}">Skip</button></div>{% endfor %}</div>{% endif %}{% endfor %}
 <h2>Course progress</h2>
 {% for a in active %}<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>{{ a.m.brand }}</b><span class="mute">{{ a.left }} of {{ a.m.qty }} units left · {{ a.days_left }} day{{ '' if a.days_left==1 else 's' }} left</span></div>
@@ -252,7 +258,7 @@ function refresh(){const R=rows(),tk=R.filter(r=>state(r)=="taken").length,sk=R.
  R.forEach(r=>{const s=state(r);r.querySelector(".pill").setAttribute("aria-pressed",s=="taken");r.querySelector(".skip").setAttribute("aria-pressed",s=="skipped");r.querySelector(".st").textContent=label[s]});
  badges();return t>0&&tk==t}
 function toast(m){const e=document.createElement("div");e.className="toast";e.setAttribute("role","status");e.textContent=m;document.body.appendChild(e);setTimeout(()=>e.remove(),2600)}
-function celebrate(){if(reduce)return;const box=(document.querySelector(".ring")||document.body).getBoundingClientRect(),cols=["#c9b8ff","#bff0dc","#fff2b3","#f5c842"];
+function celebrate(){if(reduce)return;const box=(document.querySelector(".ring")||document.body).getBoundingClientRect(),cols=["#ee5c92","#f6a21e","#17a99d","#a577e8"];
  for(let i=0;i<16;i++){const e=document.createElement("i");e.className="fx";e.style.background=cols[i%4];e.style.left=(box.left+box.width/2)+"px";e.style.top=(box.top+box.height/2)+"px";document.body.appendChild(e);
  const a=Math.random()*6.28,d=70+Math.random()*90;e.animate([{transform:"translate(0,0) rotate(0)",opacity:1},{transform:"translate("+Math.cos(a)*d+"px,"+(Math.sin(a)*d+40)+"px) rotate("+(Math.random()*540)+"deg)",opacity:0}],{duration:900,easing:"ease-out"}).onfinish=()=>e.remove()}}
 document.querySelectorAll(".dose button").forEach(b=>b.addEventListener("click",()=>{
@@ -264,7 +270,7 @@ document.querySelectorAll(".dose button").forEach(b=>b.addEventListener("click",
   .then(r=>{if(!r.ok)throw 0}).catch(()=>{row.classList.remove("taken","skipped");if(prev!="pending")row.classList.add(prev);refresh();toast("Could not save. Try again.")})}));
 refresh();
 </script>{% endblock %}"""
-DASH = """{% extends "base.html" %}{% block hero %}<h1>Dashboard</h1><p>Savings, adherence, safety and match quality across your prescriptions.</p>{% endblock %}
+DASH = """{% extends "base.html" %}{% block mascot %}{{ M["cloud"] }}{% endblock %}{% block hero %}<h1>Dashboard</h1><p>Savings, adherence, safety and match quality across your prescriptions.</p>{% endblock %}
 {% block content %}
 {% if not n %}<div class="card pull"><h3>No data yet</h3><p class="mute">Analyse a prescription with “Send to my tracker” ticked, or load demo data to preview the dashboard.</p><a class="btn" href="/">Analyse a prescription</a> <form method="post" action="/demo" style="display:inline"><button class="btn alt">Load demo data</button></form></div>
 {% else %}
@@ -278,7 +284,22 @@ DASH = """{% extends "base.html" %}{% block hero %}<h1>Dashboard</h1><p>Savings,
 <form method="post" action="/reset" onsubmit="return confirm('Delete all saved prescriptions and dose logs?')"><button class="btn alt sm">Clear all data</button> <span class="mute">Demo data is only for previews and screenshots.</span></form>
 {% endif %}{% endblock %}"""
 
+# ---------------- mascots (small decorative SVG characters) ----------------
+def _face(cx, cy, gap=14, look=1.2):
+    s = ""
+    for dx in (-gap / 2, gap / 2):
+        s += '<circle cx="%.1f" cy="%.1f" r="5.4" fill="#fff"/><circle cx="%.1f" cy="%.1f" r="2.8" fill="#1b1030"/>' % (cx + dx, cy, cx + dx + look, cy + .8)
+    return s + '<path d="M%.1f %.1fq4 4.5 8 0" fill="none" stroke="#1b1030" stroke-width="2.4" stroke-linecap="round"/>' % (cx - 4, cy + 10)
+def _svg(body): return Markup('<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">%s</svg>' % body)
+MASCOT = {
+    "pill": _svg('<g transform="rotate(-28 50 50)"><path d="M34 30h16v40H34a20 20 0 0 1 0-40z" fill="#f27ea6"/><path d="M50 30h16a20 20 0 0 1 0 40H50z" fill="#f6b73c"/>' + _face(50, 48) + '</g>'),
+    "pentagon": _svg('<path d="M50 14 86 40 72 84H28L14 40Z" fill="#7a92da" stroke="#7a92da" stroke-width="10" stroke-linejoin="round"/><path d="M80 8l2.5 6 6 2.5-6 2.5L80 25l-2.5-6-6-2.5 6-2.5z" fill="#f6b73c"/>' + _face(50, 56)),
+    "flame": _svg('<path d="M52 6C56 26 86 38 86 64A36 36 0 0 1 14 64C14 46 26 38 34 24C38 32 42 34 44 30C48 22 50 14 52 6Z" fill="#f26a3d"/><path d="M50 50C56 60 68 64 68 76A18 18 0 0 1 32 76C32 64 44 60 50 50Z" fill="#ffb52e"/>' + _face(50, 72, 12)),
+    "cloud": _svg('<g fill="#7f93e0"><circle cx="36" cy="56" r="17"/><circle cx="58" cy="44" r="22"/><circle cx="72" cy="62" r="15"/><rect x="18" y="58" width="68" height="24" rx="12"/></g>' + _face(52, 64)),
+}
+
 app = Flask(__name__); app.jinja_loader = DictLoader({"base.html": BASE, "home.html": HOME, "tracker.html": TRACKER, "dashboard.html": DASH})
+app.jinja_env.globals["M"] = MASCOT
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 @app.errorhandler(413)
 def too_big(e): return render_template("home.html", text=SAMPLE, r=None, ocr=None, err="That file is too large. Please upload an image under 8 MB.", saved=False), 413
